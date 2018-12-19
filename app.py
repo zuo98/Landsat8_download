@@ -11,8 +11,10 @@ opener = urllib.request.build_opener(cookies)
 urllib.request.install_opener(opener)
 
 data = urllib.request.urlopen("https://ers.cr.usgs.gov").read().decode('utf-8')
-token = re.search(r'<input .*?name="csrf_token".*?value="(.*?)"', data).group(1)
-ncforminfo = re.search(r'<input .*?name="__ncforminfo".*?value="(.*?)"', data).group(1)
+token = re.search(
+    r'<input .*?name="csrf_token".*?value="(.*?)"', data).group(1)
+ncforminfo = re.search(
+    r'<input .*?name="__ncforminfo".*?value="(.*?)"', data).group(1)
 
 
 def sizeof_fmt(num):
@@ -34,9 +36,10 @@ print(params)
 request = urllib.request.Request(
     "https://ers.cr.usgs.gov/login", params, headers={})
 f = urllib.request.urlopen(request)
+dataUrl = 'https://earthexplorer.usgs.gov/download/' + \
+    '12864/LC81230322018338LGN00/STANDARD/EE'
 
-req = urllib.request.urlopen(
-    'https://earthexplorer.usgs.gov/download/12864/LC81230322018338LGN00/STANDARD/EE')
+req = urllib.request.urlopen(dataUrl)
 
 info = req.info()['Content-Type']
 print(info)
