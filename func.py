@@ -37,4 +37,3 @@ def next_overpass(date1, path, sat):
     else:
         date_overpass = date1
     return (date_overpass)
-

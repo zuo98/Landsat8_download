@@ -1,48 +1,60 @@
 # -*- coding: utf-8 -*-
-# Landsat Data download from earth explorer
-
-import os, sys, math, requests, time, math, shutil
+import os, sys, math, urllib.request, urllib.parse, time, math, shutil
 import subprocess
 import optparse
-import datetime
 import csv
 import re
-import func
-output = r'C:\Users\STUDENT\Desktop'
-#    [option, bird, start_date, scene, ]
-key = ['scene', 'LC8', '20130127', '198030']
+from configinfo import usgs
 
-usgs = configinfo.usgs
-produit = key[1]
-path = key[3][0:3]
-row = key[3][3:6]
+cookies = urllib.request.HTTPCookieProcessor()
+opener = urllib.request.build_opener(cookies)
+urllib.request.install_opener(opener)
 
-year_start = int(key[2][0:4])
-month_start = int(key[2][4:6])
-day_start = int(key[2][6:8])
-date_start = datetime.datetime(year_start, month_start, day_start)
-date_end = datetime.datetime.now()
-print(date_start)
-global downloaded_ids
-downloaded_ids = []
-func.connect_earthexplorer_no_proxy(usgs)
-if produit == 'LC8':
-    repert = '12864'
-    stations = ['LGN']
+data = urllib.request.urlopen("https://ers.cr.usgs.gov").read().decode('utf-8')
+token = re.search(r'<input .*?name="csrf_token".*?value="(.*?)"', data).group(1)
+ncforminfo = re.search(r'<input .*?name="__ncforminfo".*?value="(.*?)"', data).group(1)
 
-curr_date = func.next_overpass(date_start, int(path), produit)
 
-check = 1
-# while (curr_date < date_end) and check == 1:
-date_asc = curr_date.strftime("%Y%j")
-notfound = False
-print('Searching for images on (julian date): ' + date_asc + '...')
-curr_date = curr_date + datetime.timedelta(16)
-for station in stations:
-    for version in ['00', '01', '02']:
-        nom_prod = produit + key[3] + date_asc + station + version
-        tgzfile = os.path.join(output, nom_prod + '.tgz')
-        lsdestdir = os.path.join(output, nom_prod)
-        url = "https://earthexplorer.usgs.gov/download/%s/%s/STANDARD/EE" % (
-            repert, nom_prod)
-        print(url)
+def sizeof_fmt(num):
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
+
+params = urllib.parse.urlencode(
+        dict(
+            username=usgs['username'],
+            password=usgs['password'],
+            csrf_token=token,
+            __ncforminfo=ncforminfo)).encode("utf-8")
+
+print(params)
+
+request = urllib.request.Request(
+    "https://ers.cr.usgs.gov/login", params, headers={})
+f = urllib.request.urlopen(request)
+
+req = urllib.request.urlopen(
+    'https://earthexplorer.usgs.gov/download/12864/LC81230322018338LGN00/STANDARD/EE')
+
+info = req.info()['Content-Type']
+print(info)
+total_size = int(req.info()['Content-Length'].strip())
+
+downloaded = 0
+CHUNK = 1024 * 1024 * 8
+with open('123.zip', 'wb') as fp:
+    start = time.time()
+    while True:
+        chunk = req.read(CHUNK)
+        downloaded += len(chunk)
+        done = int(50 * downloaded / total_size)
+        sys.stdout.write('\r[{1}{2}]{0:3.0f}% {3}ps'.format(
+            math.floor((float(downloaded) / total_size) * 100),
+            '=' * done, ' ' * (50 - done),
+            sizeof_fmt((downloaded // int((time.time() - start))) / 8)))
+        sys.stdout.flush()
+        if not chunk:
+            break
+        fp.write(chunk)
