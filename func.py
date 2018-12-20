@@ -32,7 +32,8 @@ def connect_earthexplorer(usgs):
     data = f.read()
     f.close()
     if data.find(
-            'You must sign in as a registered user to download data or place orders for USGS EROS products'
+            'You must sign in as a registered user to download ' +
+            'data or place orders for USGS EROS products'
     ) > 0:
         print("Authentification failed")
         sys.exit(-1)
@@ -56,7 +57,7 @@ def downloadData(dataUrl, path, fielName):
 
     downloaded = 0
     CHUNK = 1024 * 1024 * 8
-    with open('123.zip', 'wb') as fp:
+    with open(path+fielName, 'wb') as fp:
         start = time.time()
         while True:
             chunk = req.read(CHUNK)
