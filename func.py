@@ -1,9 +1,75 @@
 import datetime
+import urllib.request
+import urllib.parse
 import math
+import sys
+import re
+import time
 
 
-def connect_earthexplorer_no_proxy(usgs):
-    pass
+def connect_earthexplorer(usgs):
+    cookies = urllib.request.HTTPCookieProcessor()
+    opener = urllib.request.build_opener(cookies)
+    urllib.request.install_opener(opener)
+
+    data = urllib.request.urlopen(
+        "https://ers.cr.usgs.gov").read().decode('utf-8')
+    token = re.search(
+        r'<input .*?name="csrf_token".*?value="(.*?)"', data).group(1)
+    ncforminfo = re.search(
+        r'<input .*?name="__ncforminfo".*?value="(.*?)"', data).group(1)
+
+    params = urllib.parse.urlencode(
+            dict(
+                username=usgs['username'],
+                password=usgs['password'],
+                csrf_token=token,
+                __ncforminfo=ncforminfo)).encode("utf-8")
+    request = urllib.request.Request(
+        "https://ers.cr.usgs.gov/login", params, headers={})
+    f = urllib.request.urlopen(request)
+
+    data = f.read()
+    f.close()
+    if data.find(
+            'You must sign in as a registered user to download data or place orders for USGS EROS products'
+    ) > 0:
+        print("Authentification failed")
+        sys.exit(-1)
+    print('Login in succeed!')
+    return
+
+
+def sizeof_fmt(num):
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
+
+def downloadData(dataUrl, path, fielName):
+    req = urllib.request.urlopen(dataUrl)
+
+    info = req.info()['Content-Type']
+    print(info)
+    total_size = int(req.info()['Content-Length'].strip())
+
+    downloaded = 0
+    CHUNK = 1024 * 1024 * 8
+    with open('123.zip', 'wb') as fp:
+        start = time.time()
+        while True:
+            chunk = req.read(CHUNK)
+            downloaded += len(chunk)
+            done = int(50 * downloaded / total_size)
+            sys.stdout.write('\r[{1}{2}]{0:3.0f}% {3}ps'.format(
+                math.floor((float(downloaded) / total_size) * 100),
+                '=' * done, ' ' * (50 - done),
+                sizeof_fmt((downloaded // int((time.time() - start))) / 8)))
+            sys.stdout.flush()
+            if not chunk:
+                break
+            fp.write(chunk)
 
 
 def cycle_day(path):
