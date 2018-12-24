@@ -5,6 +5,10 @@ import math
 import sys
 import re
 import time
+import os
+import gzip
+import json
+import tarfile
 
 
 def connect_earthexplorer(usgs):
@@ -71,6 +75,46 @@ def downloadData(dataUrl, path, fielName):
             if not chunk:
                 break
             fp.write(chunk)
+
+
+def unZip(filePath):
+    g_name = filePath.replace(".gz", "")
+    g_file = gzip.GzipFile(filePath)
+    open(g_name, "wb+").write(g_file.read())
+    g_file.close()
+
+    t_file = tarfile.open(g_name)
+    names = t_file.getnames()
+    t_name = g_name.replace('.tar', '')
+    # .tar解压后有多个文件需要建立一个文件夹
+    if os.path.isdir(t_name):
+        pass
+    else:
+        os.mkdir(t_name)
+    for name in names:
+        t_file.extract(name, t_name)
+    t_file.close()
+
+
+def getJson(fileName):
+    jsondict = {}
+    with open(fileName, 'r') as f:
+        LINE = f.readline()
+        while LINE:
+            LINE = str(LINE)
+            LINE = LINE.replace('\n', '')
+            LINE = LINE.replace(' ', '')
+            LINE = LINE.replace('\"', '')
+            LINE = LINE.split('=')
+            if len(LINE) > 1:
+                try:
+                    float(LINE[1])
+                    jsondict[LINE[0]] = int(LINE[1])
+                except:
+                    jsondict[LINE[0]] = LINE[1]
+            LINE = f.readline()
+    jsonfile = json.dumps(jsondict)
+    return jsonfile
 
 
 def cycle_day(path):
