@@ -12,6 +12,8 @@ import tarfile
 
 
 def connect_earthexplorer(usgs):
+    '''Simulate login
+    '''
     cookies = urllib.request.HTTPCookieProcessor()
     opener = urllib.request.build_opener(cookies)
     urllib.request.install_opener(opener)
@@ -33,7 +35,7 @@ def connect_earthexplorer(usgs):
         "https://ers.cr.usgs.gov/login", params, headers={})
     f = urllib.request.urlopen(request)
 
-    data = f.read()
+    data = f.read().decode('utf-8')
     f.close()
     if data.find(
             'You must sign in as a registered user to download ' +
@@ -53,15 +55,14 @@ def sizeof_fmt(num):
 
 
 def downloadData(dataUrl, path, fielName):
+    '''Download data
+    '''
     req = urllib.request.urlopen(dataUrl)
 
-    info = req.info()['Content-Type']
-    print(info)
     total_size = int(req.info()['Content-Length'].strip())
-
     downloaded = 0
     CHUNK = 1024 * 1024 * 8
-    with open(path+fielName, 'wb') as fp:
+    with open(path+'\\'+fielName, 'wb') as fp:
         start = time.time()
         while True:
             chunk = req.read(CHUNK)
@@ -77,16 +78,15 @@ def downloadData(dataUrl, path, fielName):
             fp.write(chunk)
 
 
-def unZip(filePath):
-    g_name = filePath.replace(".gz", "")
-    g_file = gzip.GzipFile(filePath)
+def unZip(fileName):
+    g_name = fileName.replace(".gz", "")
+    g_file = gzip.GzipFile(fileName)
     open(g_name, "wb+").write(g_file.read())
     g_file.close()
 
     t_file = tarfile.open(g_name)
     names = t_file.getnames()
     t_name = g_name.replace('.tar', '')
-    # .tar解压后有多个文件需要建立一个文件夹
     if os.path.isdir(t_name):
         pass
     else:
@@ -97,6 +97,8 @@ def unZip(filePath):
 
 
 def getJson(fileName):
+    '''Convert header files to json files
+    '''
     jsondict = {}
     with open(fileName, 'r') as f:
         LINE = f.readline()
@@ -130,18 +132,10 @@ def cycle_day(path):
     return (cycle_day_path)
 
 
-def next_overpass(date1, path, sat):
+def next_overpass(date1, path):
     """ provides the next overpass for path after date1
     """
-    date0_L5 = datetime.datetime(1985, 5, 4)
-    date0_L7 = datetime.datetime(1999, 1, 11)
-    date0_L8 = datetime.datetime(2013, 5, 1)
-    if sat == 'LT5':
-        date0 = date0_L5
-    elif sat == 'LE7':
-        date0 = date0_L7
-    elif sat == 'LC8':
-        date0 = date0_L8
+    date0 = datetime.datetime(2013, 5, 1)
     next_day = math.fmod((date1 - date0).days - cycle_day(path) + 1, 16)
     if next_day != 0:
         date_overpass = date1 + datetime.timedelta(16 - next_day)
